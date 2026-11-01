@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#123c70">
+<title>ApipStudio Model Uploader</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef4fb;color:#17304f;font-family:system-ui,Arial,sans-serif}
+.wrap{width:min(100% - 28px,560px);margin:28px auto}.hero{padding:24px 22px;background:linear-gradient(135deg,#12345b,#176bc0);color:white;border-radius:22px 22px 0 0}
+.brand{font-size:12px;font-weight:800;letter-spacing:2px;color:#b9d9ff}h1{font-size:25px;margin:9px 0}.hero p{font-size:13px;color:#d7e9ff;margin:0}
+.card{background:white;padding:22px;border-radius:0 0 22px 22px;box-shadow:0 14px 35px #16385c12}
+label{display:block;font-size:13px;font-weight:750;margin:16px 0 7px}input,textarea{width:100%;border:1px solid #d6e1ef;border-radius:12px;padding:13px;font:inherit;background:#fbfdff;color:#17304f}
+textarea{min-height:84px;resize:vertical}.hint{font-size:11px;color:#6e8098;margin-top:6px;line-height:1.5}
+button{width:100%;border:0;border-radius:12px;padding:15px;margin-top:19px;background:#176bc0;color:white;font-weight:800;font-size:15px}button:disabled{opacity:.55}
+.status{display:none;margin-top:16px;padding:13px;border-radius:12px;font-size:13px;line-height:1.5;overflow-wrap:anywhere}.status.show{display:block}.info{background:#eaf3ff;color:#174e88}.ok{background:#e8f8ef;color:#17613a}.err{background:#fff0f0;color:#9a2525}
+.foot{text-align:center;font-size:11px;color:#7b8ba0;margin:15px 8px}a{color:#176bc0}
+</style></head>
+<body><main class="wrap">
+<header class="hero"><div class="brand">APIPSTUDIO</div><h1>ROBLOX MODEL UPLOADER</h1><p>Unggah model Roblox dengan mudah dari HP.</p></header>
+<section class="card">
+<form id="form">
+<label for="code">Kode akses website</label><input id="code" type="password" autocomplete="off" placeholder="Kode akses pribadi" required>
+<div class="hint">Ini bukan password Roblox atau API Key.</div>
+<label for="name">Nama model</label><input id="name" name="displayName" maxlength="50" placeholder="Contoh: ApipStudio Block" required>
+<label for="desc">Deskripsi</label><textarea id="desc" name="description" maxlength="1000" placeholder="Deskripsi singkat (opsional)"></textarea>
+<label for="file">File model</label><input id="file" name="modelFile" type="file" accept=".rbxm,.rbxmx" required>
+<div class="hint">Format .rbxm atau .rbxmx. Maksimal 20 MB.</div>
+<button id="submit" type="submit">UPLOAD KE ROBLOX</button>
+</form><div id="status" class="status" role="status" aria-live="polite"></div>
+</section><div class="foot">ApipStudio SimpleHost V1 · Roblox Open Cloud</div></main>
+<script>
+const form=document.getElementById("form"),btn=document.getElementById("submit"),box=document.getElementById("status");
+function show(msg,kind){box.className="status show "+kind;box.textContent=msg}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+form.addEventListener("submit",async e=>{
+ e.preventDefault();const file=document.getElementById("file").files[0],code=document.getElementById("code").value;
+ if(!file)return show("Pilih file model terlebih dahulu.","err");
+ if(file.size>20*1024*1024)return show("Ukuran file maksimal 20 MB.","err");
+ btn.disabled=true;btn.textContent="MENGUNGGAH...";show("Mengirim model ke Roblox. Jangan tutup halaman.","info");
+ try{
+  const r=await fetch("/api/upload",{method:"POST",headers:{"x-upload-access-code":code},body:new FormData(form)});
+  const d=await r.json();if(!r.ok)throw Error(d.error||"Upload gagal.");
+  show("File diterima Roblox. Menunggu hasil...","info");let done=null;
+  for(let i=0;i<30;i++){await sleep(2000);const q=await fetch("/api/operation/"+encodeURIComponent(d.operationId),{headers:{"x-upload-access-code":code}});const x=await q.json();if(!q.ok)throw Error(x.error||"Gagal memeriksa hasil.");if(x.done){done=x;break}}
+  if(!done)show("Upload masih diproses Roblox. Periksa lagi beberapa saat nanti.","info");
+  else if(done.assetId){show("Berhasil! Asset ID Roblox: "+done.assetId,"ok");const a=document.createElement("a");a.href="https://create.roblox.com/dashboard/creations";a.target="_blank";a.rel="noopener";a.textContent="Buka Creator Dashboard";box.append(document.createElement("br"),a)}
+  else show(done.message||"Roblox belum menyelesaikan upload. Periksa file dan izin API Key.","err");
+ }catch(err){show(err.message||"Terjadi kesalahan. Coba lagi.","err")}
+ finally{btn.disabled=false;btn.textContent="UPLOAD KE ROBLOX"}
+});
+</script></body></html>
